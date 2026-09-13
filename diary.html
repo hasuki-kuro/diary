@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日記</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #15171b;
+    --surface: #1b1e23;
+    --surface-raised: #20242a;
+    --ink: #e8e3d6;
+    --ink-dim: #8f9295;
+    --accent: #4a8079;
+    --accent-soft: rgba(74, 128, 121, 0.16);
+    --danger: #a3503f;
+    --border: #2a2e33;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Shippori Mincho', serif;
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.01em;
+  }
+
+  /* ---- layout ---- */
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  header .today {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+  }
+
+  /* ---- entry form ---- */
+  #entry-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 40px;
+  }
+  #entry-form .date-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  #entry-form .date-row input[type="date"] {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  .field textarea {
+    width: 100%;
+    min-height: 56px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: 'Shippori Mincho', serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+  }
+  .field textarea:focus, #entry-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  #save-btn {
+    background: var(--accent);
+    color: #0e1512;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #save-btn:active { opacity: 0.85; }
+  #form-status {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+  }
+
+  /* ---- search ---- */
+  #search-row {
+    margin-bottom: 24px;
+  }
+  #search-row input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+    padding: 8px 2px;
+    font-size: 0.9rem;
+  }
+  #search-row input:focus { outline: none; border-color: var(--accent); }
+  #search-row input::placeholder { color: var(--ink-dim); }
+
+  /* ---- log ---- */
+  .entry {
+    border-left: 2px solid var(--border);
+    padding-left: 18px;
+    margin-bottom: 30px;
+    position: relative;
+  }
+  .entry .date {
+    color: var(--accent);
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  .entry .row { margin-bottom: 8px; font-size: 0.95rem; }
+  .entry .row .k {
+    color: var(--ink-dim);
+    font-size: 0.75rem;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .entry .actions {
+    margin-top: 8px;
+  }
+  .entry .actions button {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    margin-right: 16px;
+  }
+  .entry .actions button:hover { color: var(--ink); }
+  .entry .actions .del:hover { color: var(--danger); }
+
+  #empty-state {
+    color: var(--ink-dim);
+    font-size: 0.9rem;
+    padding: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <h1>日記</h1>
+    <span class="today mono" id="today-label"></span>
+  </header>
+
+  <form id="entry-form">
+    <div class="date-row">
+      <span class="mono" style="color:var(--ink-dim); font-size:0.8rem;">日付</span>
+      <input type="date" id="f-date">
+    </div>
+    <div class="field">
+      <label>できごと</label>
+      <textarea id="f-dekigoto"></textarea>
+    </div>
+    <div class="field">
+      <label>進捗・やったこと</label>
+      <textarea id="f-shinchoku"></textarea>
+    </div>
+    <div class="field">
+      <label>気になったこと・次やること</label>
+      <textarea id="f-tsugi"></textarea>
+    </div>
+    <button type="submit" id="save-btn">保存する</button>
+    <span id="form-status"></span>
+  </form>
+
+  <div id="search-row">
+    <input type="text" id="search" placeholder="日付やキーワードで絞り込む">
+  </div>
+
+  <div id="log"></div>
+  <div id="empty-state" style="display:none;">まだ記録がありません。今日の分から始めてみましょう。</div>
+</main>
+
+<!-- Firebase (CDN, compat build) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+  // ==================== 設定ここだけ書き換える ====================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBX0V6yCoAvWFRnL3nnqvl8P2rXHFewmNI",
+    authDomain: "kuro-diary.firebaseapp.com",
+    databaseURL: "https://kuro-diary-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "kuro-diary",
+    storageBucket: "kuro-diary.firebasestorage.app",
+    messagingSenderId: "208817644011",
+    appId: "1:208817644011:web:82c548672d448d2f01f9ae"
+  };
+  // ================================================================
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const entriesRef = db.ref("diaryEntries");
+
+  // ---- date helpers ----
+  function todayStr() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  document.getElementById("today-label").textContent = todayStr();
+  document.getElementById("f-date").value = todayStr();
+
+  // ---- form ----
+  const form = document.getElementById("entry-form");
+  const fDate = document.getElementById("f-date");
+  const fDekigoto = document.getElementById("f-dekigoto");
+  const fShinchoku = document.getElementById("f-shinchoku");
+  const fTsugi = document.getElementById("f-tsugi");
+  const formStatus = document.getElementById("form-status");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const date = fDate.value;
+    if (!date) return;
+    entriesRef.child(date).set({
+      dekigoto: fDekigoto.value.trim(),
+      shinchoku: fShinchoku.value.trim(),
+      tsugi: fTsugi.value.trim(),
+      updatedAt: Date.now()
+    }).then(() => {
+      formStatus.textContent = "保存しました";
+      setTimeout(() => formStatus.textContent = "", 2000);
+    }).catch((err) => {
+      formStatus.textContent = "保存に失敗: " + err.message;
+    });
+  });
+
+  function loadEntryIntoForm(date, data) {
+    fDate.value = date;
+    fDekigoto.value = data.dekigoto || "";
+    fShinchoku.value = data.shinchoku || "";
+    fTsugi.value = data.tsugi || "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ---- log rendering ----
+  let allEntries = {};
+  const logEl = document.getElementById("log");
+  const emptyState = document.getElementById("empty-state");
+  const searchInput = document.getElementById("search");
+
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  function render() {
+    const query = searchInput.value.trim().toLowerCase();
+    const dates = Object.keys(allEntries).sort().reverse();
+    const filtered = dates.filter((date) => {
+      if (!query) return true;
+      const e = allEntries[date];
+      const hay = `${date} ${e.dekigoto} ${e.shinchoku} ${e.tsugi}`.toLowerCase();
+      return hay.includes(query);
+    });
+
+    logEl.innerHTML = "";
+    emptyState.style.display = filtered.length === 0 ? "block" : "none";
+
+    filtered.forEach((date) => {
+      const e = allEntries[date];
+      const div = document.createElement("div");
+      div.className = "entry";
+      div.innerHTML = `
+        <div class="date mono">${date}</div>
+        ${e.dekigoto ? `<div class="row"><span class="k">できごと</span>${escapeHtml(e.dekigoto)}</div>` : ""}
+        ${e.shinchoku ? `<div class="row"><span class="k">進捗・やったこと</span>${escapeHtml(e.shinchoku)}</div>` : ""}
+        ${e.tsugi ? `<div class="row"><span class="k">気になったこと・次やること</span>${escapeHtml(e.tsugi)}</div>` : ""}
+        <div class="actions">
+          <button class="edit mono">編集</button>
+          <button class="del mono">削除</button>
+        </div>
+      `;
+      div.querySelector(".edit").addEventListener("click", () => loadEntryIntoForm(date, e));
+      div.querySelector(".del").addEventListener("click", () => {
+        if (confirm(`${date} の記録を削除しますか？`)) {
+          entriesRef.child(date).remove();
+        }
+      });
+      logEl.appendChild(div);
+    });
+  }
+
+  searchInput.addEventListener("input", render);
+
+  entriesRef.on("value", (snapshot) => {
+    allEntries = snapshot.val() || {};
+    render();
+  });
+</script>
+</body>
+</html>
